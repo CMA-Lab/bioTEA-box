@@ -1,0 +1,35 @@
+name: Publish the box on Docker Hub
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  rebuild-docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Update release string
+        run: echo "${{ github.event.release.tag_name }}" > ./VERSION
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: cmalabscience
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            cmalabscience/biotea-box:${{ github.event.release.tag_name }}
+
