@@ -268,7 +268,7 @@ read_expression_data <- function (target, verbose = TRUE) {
 #' @author FeAR
 remove_duplicates <- function(ddf) {
   
-  df <- cbind(ddf, aveExpr = rowMeans(ddf))
+  df <- cbind(ddf, aveExpr = rowMeans(ddf[,-1]))
   
   df <- df[order(df[,"probe_id"],-df[,"aveExpr"]),]
   df <- df[!duplicated(df$probe_id),]
