@@ -241,6 +241,7 @@ write_expression_data <- function (
 #' @author MrHedmad
 read_expression_data <- function (target, verbose = TRUE) {
   expression_data <- read.csv(target)
+  expression_data <- remove_duplicates(expression_data)
   rownames(expression_data) <- expression_data$probe_id
   expression_data$probe_id <- NULL
 
@@ -253,6 +254,35 @@ read_expression_data <- function (target, verbose = TRUE) {
   }
 
   return(expression_data)
+}
+
+
+#' Deleting genes with duplicated probe_ids based on the average gene expression
+#' In the case of duplicated gene_ids, only the most expressed will be retained.
+#' 
+#' @param ddf a data frame containing the expression matrix with possible
+#'            duplicated gene_ids
+#' 
+#' @returns the same dataset as in input, but with no duplicated gene_ids
+#' 
+#' @author FeAR
+remove_duplicates <- function(ddf) {
+  
+  df <- cbind(ddf, aveExpr = rowMeans(ddf))
+  
+  df <- df[order(df[,"probe_id"],-df[,"aveExpr"]),]
+  df <- df[!duplicated(df$probe_id),]
+  df <- subset(df, select = -aveExpr) # remove added column
+  
+  if (dim(ddf)[1] != dim(df)[1]) {
+    if (verbose) {
+      log$info(paste(dim(ddf)[1] - dim(df)[1],
+        "duplicated gene_ids have been detected and removed"
+      ))
+    }
+  }
+  
+  return(df)
 }
 
 
