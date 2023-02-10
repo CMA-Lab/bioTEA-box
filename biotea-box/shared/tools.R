@@ -266,7 +266,7 @@ read_expression_data <- function (target, verbose = TRUE) {
 #' @returns the same dataset as in input, but with no duplicated gene_ids
 #' 
 #' @author FeAR
-remove_duplicates <- function(ddf) {
+remove_duplicates <- function(ddf, verbose = TRUE) {
   
   df <- cbind(ddf, aveExpr = rowMeans(ddf[,-1]))
   
