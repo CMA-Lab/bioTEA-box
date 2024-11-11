@@ -211,10 +211,12 @@ subtract.str <- function(to.remove, original) {
 #'
 #' @author MrHedmad
 write_expression_data <- function (
-  expression_data, target = "expression_data.csv",
+  expression_data,
+  rownames_col = "probe_id",
+  target = "expression_data.csv",
   verbose = TRUE
 ) {
-  expression_data$probe_id <- rownames(expression_data)
+  expression_data[[rownames_col]] <- rownames(expression_data)
   rownames(expression_data) <- NULL
 
   expression_data %>% dplyr::select("probe_id", everything()) -> expression_data
@@ -239,11 +241,11 @@ write_expression_data <- function (
 #' @returns A data.frame with  the loaded data, with probe ids as row names.
 #'
 #' @author MrHedmad
-read_expression_data <- function (target, verbose = TRUE) {
+read_expression_data <- function (target, rownames_col = "probe_id", verbose = TRUE) {
   expression_data <- read.csv(target)
   expression_data <- remove_duplicates(expression_data)
-  rownames(expression_data) <- expression_data$probe_id
-  expression_data$probe_id <- NULL
+  rownames(expression_data) <- expression_data[[rownames_col]]
+  expression_data[[rownames_col]] <- NULL
 
   if (verbose) {
     log$info(paste(
