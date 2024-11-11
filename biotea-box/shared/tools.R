@@ -207,6 +207,7 @@ subtract.str <- function(to.remove, original) {
 #' @param expression_data The expression data to save. A data.frame with
 #'   probe ids as rownames.
 #' @param target Path to where the file will be saved.
+#' @param rownames_col Name of column with row names.
 #' @param verbose Should the function write to the log file?
 #'
 #' @author MrHedmad
@@ -237,6 +238,7 @@ write_expression_data <- function (
 #' one saved by the `write_expression_data` function.
 #'
 #' @param target Path to the file to read.
+#' @param rownames_col Name of column with row names.
 #'
 #' @returns A data.frame with  the loaded data, with probe ids as row names.
 #'
