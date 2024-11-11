@@ -52,6 +52,81 @@
 
 log$debug("Sourcing the 'Agilent_TXT_to_Expression.R' file.")
 
+# All possible scanners. This code makes the first two checked items to be
+# "agilent.mean" and "agilent.median", so that they are given priority.
+AGILENT_COLNAME_MATCHER <- {
+  base_colnames <- list(
+    agilent = c("Row","Col","Start","Sequence","SwissProt","GenBank","Primate","GenPept","ProbeUID","ControlType","ProbeName","GeneName","SystematicName","Description"),
+    arrayvision = c("Spot labels","ID"),
+    bluefuse = c("ROW","COL","SUBGRIDROW","SUBGRIDCOL","BLOCK","NAME","ID","AMPCH1","AMPCH2"),
+    genepix = c("Block","Row","Column","ID","Name"),
+    # Imagene has completely different files, and everything seems to break, so no thanks.
+    #imagene9 = c("Meta Row","Meta Column","Row","Column","Gene ID","Signal Mean 2","Signal Mean 1","Background Median 2","Background Median 1"),
+    quantarray= c("Array Row","Array Column","Row","Column","Name","ch2 Intensity","ch1 Intensity","ch2 Background","ch1 Background"),
+    scanarrayexpress = c("Array Row","Array Column","Spot Row","Spot Column","Ch1 Mean","Ch1 B Median","Ch2 Mean","Ch2 B Median"), 	
+    smd = c("Spot","Clone ID","Gene Symbol","Gene Name","Cluster ID","Accession","Preferred name","Locuslink ID","Name","Sequence Type","X Grid Coordinate (within sector)","Y Grid Coordinate (within sector)","Sector","Failed","Plate Number","Plate Row","Plate Column","Clone Source","Is Verified","Is Contaminated","Luid","Ch1 Intensity (Mean)","Ch1 Background (Median)","Ch2 Intensity (Mean)","Ch2 Background (Median)"),
+    smd.old = c("Spot","Clone ID","Gene Symbol","Gene Name","Cluster ID","Accession","Preferred name","Locuslink ID","Name","Sequence Type","X Grid Coordinate (within sector)","Y Grid Coordinate (within sector)","Sector","Failed","Plate Number","Plate Row","Plate Column","Clone Source","Is Verified","Is Contaminated","Luid","CH1I_MEAN","CH1B_MEDIAN","CH2I_MEAN","CH2B_MEDIAN"),
+    spot = c("Rmean","Gmean","morphR","morphG"),
+    spot.close.open = c("Rmean","Gmean","morphR.close.open","morphG.close.open")
+  )
+  extra_colnames <- list(
+    agilent = list(
+      mean = c("gMeanSignal","gBGMedianSignal","rMeanSignal","rBGMedianSignal"),
+      median = c("gMedianSignal","gBGMedianSignal","rMedianSignal","rBGMedianSignal")
+    ),
+    arrayvision = list(
+      ARM = c("ARM Dens - Levels","Bkgd","ARM Dens - Levels","Bkgd"),
+      MTM = c("MTM Dens - Levels","Bkgd","MTM Dens - Levels","Bkgd")
+    ),
+    genepix = list(
+      mean = c("F635 Mean","F532 Mean","B635 Median","B532 Median"),
+      median = c("F635 Median","F532 Median","B635 Median","B532 Median"),
+      custom = c("F635 Mean","F532 Mean","B635","B532")
+    )
+  )
+  res <- list()
+  for (name in names(base_colnames)) {
+    cols <- base_colnames[[name]]
+    if (name %in% names(extra_colnames)) {
+      for (extra_name in names(extra_colnames[[name]])) {
+        extra_cols <- extra_colnames[[name]][[extra_name]]
+        res[[paste0(name, ".", extra_name)]] <- c(cols, extra_cols)
+      }
+    }
+    res[[name]] <- cols
+  }
+  
+  rm(list = c("base_colnames", "extra_colnames"))
+
+  res
+}
+
+# This is here for posterity - but it's not currently used.
+# it tries to match a set of input cols to the map above, getting the name of
+# the array. The problem is that it is difficult to get these names (it's the
+# main job of read.maimages), so we do a brute force approach instead.
+match_cols <- function(cols, col_map) {
+    scores <- lapply(col_map, \(x) {
+        sum(cols %in% x)
+    })
+    perfect_match <- lapply(col_map, \(x) {
+        (all(cols %in% x)) & (all(x %in% cols))
+    })
+    if (any(unlist(perfect_match))) {
+        return(names(col_map)[which(unlist(perfect_match))])
+    } else if (any(scores > 0)) {
+        max_score_name <- names(col_map)[which(unlist(scores) == max(unlist(scores)))[1]]
+        log$warn(paste0(
+            "Returning a partial column match (score: ", max(unlist(scores)), " / ", length(col_map[[max_score_name]]),
+            "). Input cols: ",
+            paste0(cols, collapse = ", "),
+            " - matched cols: ", paste0(col_map[[max_score_name]], collapse = ", ")
+        ))
+        return(max_score_name)
+    }
+    stop(paste0("Could not match input columns: ", paste0(cols, collapse = ", ") ))
+}
+
 agil2expression <- function (
   input_dir, output_file,
   grep_pattern = "*.(txt|TXT)",
@@ -84,11 +159,38 @@ agil2expression <- function (
     paste("Found", length(raw_files), "input files:", paste(raw_files, collapse = ", "))
   )
   log$info("Reading in input files...")
-  expression_data <- read.maimages(
-    files = file.path(input_dir, raw_files),
-    source = "agilent.median",
-    green.only = TRUE
-  )
+  
+  for (name in names(AGILENT_COLNAME_MATCHER)) {
+      log$info(paste0("Trying method: ", name))
+      expression_data <- tryCatch(
+          {
+              read.maimages(
+                  files = file.path(input_dir, raw_files),
+                  source = name,
+                  green.only = TRUE
+              )
+          },
+          error = function(cond) {
+              log$error(paste0("Failed to read images with method: ", name, ": ", cond))
+              
+              # Run garbage collection so we don't run out of memory
+              gc()
+              
+              # This gets returned instead of the error
+              NULL
+          }
+      )
+      if (!is.null(expression_data)) {
+          # maybe we could read this with multiple strategies and only keep
+          # the best one. But who cares at this point
+          break
+      }
+  }
+  
+  if (is.null(expression_data)) {
+      stop("Failed to read expression data with any strategy. Aborting.")
+  }
+  
 
   print_data <- as.data.frame(expression_data$E)
   colnames(print_data) <- raw_files
