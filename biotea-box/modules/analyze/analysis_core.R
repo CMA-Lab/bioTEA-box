@@ -961,7 +961,8 @@ bioTEA <- function(
   run_rankprod_analysis = TRUE,
   batches = NA,
   extra_limma_vars = NA,
-  group_colors = c("cornflowerblue", "firebrick3", "olivedrab3", "darkgoldenrod1", "purple", "magenta3")
+  group_colors = c("cornflowerblue", "firebrick3", "olivedrab3", "darkgoldenrod1", "purple", "magenta3"),
+  rownames_col = "probe_id"
 ) {
   # This function is so long, a description wouldn't fit here.
   # Refer to the project's README.
@@ -1033,7 +1034,7 @@ bioTEA <- function(
   # Gene Expression Matrix - log2-Intensity-Values
   log$info("Loading data...")
 
-  expression_set <- read_expression_data(input.file)
+  expression_set <- read_expression_data(input.file, rownames_col = rownames_col)
   printdata(expression_set)
   log_data(expression_set, "Raw expression set")
 
@@ -1362,7 +1363,9 @@ bioTEA <- function(
       pb$tick(0)
       for (i in seq_along(raw_contrasts)) {
         write_expression_data(
-          DEGs.limma[[i]], paste0("Limma - DEG Table ", raw_contrasts[i], ".csv"))
+          DEGs.limma[[i]], paste0("Limma - DEG Table ", raw_contrasts[i], ".csv"),
+          rownames_col = rownames_col
+        )
         pb$tick()
       }
     }
@@ -1399,7 +1402,9 @@ bioTEA <- function(
       pb$tick(0)
       for (i in seq_along(raw_contrasts)) {
         write_expression_data(
-          DEGs.rankprod[[i]], paste0("RankProd - DEG Table ", raw_contrasts[i], ".csv"))
+          DEGs.rankprod[[i]], paste0("RankProd - DEG Table ", raw_contrasts[i], ".csv"),
+          rownames_col = rownames_col
+        )
         pb$tick()
       }
     }

@@ -50,6 +50,7 @@ defaults = list(
     batches = NA,
     extra_limma_vars = NA,
     group_colors = c("cornflowerblue", "firebrick3", "olivedrab3", "darkgoldenrod1", "purple", "magenta3"),
+    rownames_col = "probe_id",
     # Plot options
     use_pdf = TRUE,
     plot_width = 16,

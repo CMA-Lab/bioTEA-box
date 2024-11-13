@@ -217,10 +217,9 @@ write_expression_data <- function (
   target = "expression_data.csv",
   verbose = TRUE
 ) {
-  expression_data[[rownames_col]] <- rownames(expression_data)
-  rownames(expression_data) <- NULL
-
-  expression_data %>% dplyr::select("probe_id", everything()) -> expression_data
+  expression_data %>%
+        rownames_to_column(rownames_col) %>%
+        dplyr::select(rownames_col, everything()) -> expression_data
 
   if (verbose) {
     log$info(paste(
@@ -244,8 +243,8 @@ write_expression_data <- function (
 #'
 #' @author MrHedmad
 read_expression_data <- function (target, rownames_col = "probe_id", verbose = TRUE) {
-  expression_data <- read.csv(target)
-  expression_data <- remove_duplicates(expression_data)
+  expression_data <- read.csv(target, row.names = NULL)
+  expression_data <- remove_duplicates(expression_data, rownames_col = rownames_col)
   rownames(expression_data) <- expression_data[[rownames_col]]
   expression_data[[rownames_col]] <- NULL
 
@@ -270,12 +269,12 @@ read_expression_data <- function (target, rownames_col = "probe_id", verbose = T
 #' @returns the same dataset as in input, but with no duplicated gene_ids
 #' 
 #' @author FeAR
-remove_duplicates <- function(ddf, verbose = TRUE) {
+remove_duplicates <- function(ddf, verbose = TRUE, rownames_col = "probe_id") {
   
   df <- cbind(ddf, aveExpr = rowMeans(ddf[,-1]))
   
-  df <- df[order(df[,"probe_id"],-df[,"aveExpr"]),]
-  df <- df[!duplicated(df$probe_id),]
+  df <- df[order(df[,rownames_col],-df[,"aveExpr"]),]
+  df <- df[!duplicated(df[[rownames_col]]),]
   df <- subset(df, select = -aveExpr) # remove added column
   
   if (dim(ddf)[1] != dim(df)[1]) {
