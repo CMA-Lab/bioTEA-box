@@ -34,7 +34,7 @@ args <- getOption("module.args")
 # signifies a required argument.
 
 defaults = list(
-    expression_data_path = NULL, output_path = NULL, database_name = NA
+    expression_data_path = NULL, output_path = NULL, database_name = NA, rownames_col = "probe_id"
 )
 
 fun_args <- validate_arguments(args, defaults)

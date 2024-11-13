@@ -284,13 +284,14 @@ annotate_data <- function(expression_set, database_name = NA) {
 #' @param database_name An optional str representing the name of the database
 #'   to source the annotations from. Defaults to `NA`, loading the local
 #'   annotations.
-annotate_to_file <- function(expression_data_path, output_path, database_name) {
+#' @param rownames_col Name of the column with the row names
+annotate_to_file <- function(expression_data_path, output_path, database_name, rownames_col = "probe_id") {
   log$info("Loading input data...")
-  expression_set <- read_expression_data(expression_data_path)
+  expression_set <- read_expression_data(expression_data_path, rownames_col = rownames_col)
 
   log$info("Annotating data...")
   annotated_set <- annotate_data(expression_set, database_name)
 
-  write_expression_data(annotated_set, output_path)
+  write_expression_data(annotated_set, output_path, rownames_col = rownames_col)
   log$info("Written annotations.")
 }
